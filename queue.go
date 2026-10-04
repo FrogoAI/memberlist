@@ -217,8 +217,8 @@ func (q *TransmitLimitedQueue) queueBroadcast(b Broadcast, initialTransmits int)
 		}
 	}
 
-	// Take the id only now: removing the invalidated items above can empty the
-	// queue, and deleteItem then resets idGen, so an earlier id could repeat.
+	// Ids only grow (the generator is reset only by Reset), so no two live
+	// items share (transmits, msgLen, id).
 	if q.idGen == math.MaxInt64 {
 		// it's super duper unlikely to wrap around within the retransmit limit
 		q.idGen = 1
@@ -237,12 +237,6 @@ func (q *TransmitLimitedQueue) deleteItem(cur *limitedBroadcast) {
 	_ = q.tq.Delete(cur)
 	if cur.name != "" {
 		delete(q.tm, cur.name)
-	}
-
-	if q.tq.Len() == 0 {
-		// At idle there's no reason to let the id generator keep going
-		// indefinitely.
-		q.idGen = 0
 	}
 }
 
@@ -390,7 +384,7 @@ func (q *TransmitLimitedQueue) Reset() {
 
 	q.tq = nil
 	q.tm = nil
-	q.idGen = 0
+	q.idGen = 0 // safe: the whole queue was just emptied
 }
 
 // Prune will retain the maxRetain latest messages, and the rest

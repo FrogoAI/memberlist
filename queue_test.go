@@ -145,24 +145,24 @@ func TestTransmitLimited_GetBroadcasts_Limit(t *testing.T) {
 	partial1 := q.GetBroadcasts(3, 80)
 	require.Equal(t, 3, len(partial1), "missing messages: %v", prettyPrintMessages(partial1))
 
-	require.Equal(t, int64(4), q.idGen, "id generator never resets")
+	require.Equal(t, int64(4), q.idGen, "id generator doesn't reset until empty")
 
 	partial2 := q.GetBroadcasts(3, 80)
 	require.Equal(t, 3, len(partial2), "missing messages: %v", prettyPrintMessages(partial2))
 
-	require.Equal(t, int64(4), q.idGen, "id generator never resets")
+	require.Equal(t, int64(4), q.idGen, "id generator doesn't reset until empty")
 
 	// Only two not expired
 	partial3 := q.GetBroadcasts(3, 80)
 	require.Equal(t, 2, len(partial3), "missing messages: %v", prettyPrintMessages(partial3))
 
-	require.Equal(t, int64(4), q.idGen, "id generator does not reset when the queue empties")
+	require.Equal(t, int64(4), q.idGen, "id generator doesn't reset on empty")
 
 	// Should get nothing
 	partial5 := q.GetBroadcasts(3, 80)
 	require.Equal(t, 0, len(partial5), "missing messages: %v", prettyPrintMessages(partial5))
 
-	require.Equal(t, int64(4), q.idGen, "id generator does not reset when the queue empties")
+	require.Equal(t, int64(4), q.idGen, "id generator doesn't reset on empty")
 }
 
 func prettyPrintMessages(msgs [][]byte) []string {

@@ -174,9 +174,18 @@ func (q *TransmitLimitedQueue) queueBroadcast(b Broadcast, initialTransmits int)
 
 	q.lazyInit()
 
+	if q.idGen == math.MaxInt64 {
+		// it's super duper unlikely to wrap around within the retransmit limit
+		q.idGen = 1
+	} else {
+		q.idGen++
+	}
+	id := q.idGen
+
 	lb := &limitedBroadcast{
 		transmits: initialTransmits,
 		msgLen:    int64(len(b.Message())),
+		id:        id,
 		b:         b,
 	}
 	unique := false
@@ -216,16 +225,6 @@ func (q *TransmitLimitedQueue) queueBroadcast(b Broadcast, initialTransmits int)
 			q.deleteItem(cur)
 		}
 	}
-
-	// Ids only grow (the generator is reset only by Reset), so no two live
-	// items share (transmits, msgLen, id).
-	if q.idGen == math.MaxInt64 {
-		// it's super duper unlikely to wrap around within the retransmit limit
-		q.idGen = 1
-	} else {
-		q.idGen++
-	}
-	lb.id = q.idGen
 
 	// Append to the relevant queue.
 	q.addItem(lb)

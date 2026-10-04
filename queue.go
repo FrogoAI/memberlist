@@ -384,7 +384,7 @@ func (q *TransmitLimitedQueue) Reset() {
 
 	q.tq = nil
 	q.tm = nil
-	q.idGen = 0 // safe: the whole queue was just emptied
+	q.idGen = 0
 }
 
 // Prune will retain the maxRetain latest messages, and the rest

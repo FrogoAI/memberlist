@@ -243,3 +243,46 @@ func TestTransmitLimited_ordering(t *testing.T) {
 		t.Fatalf("bad val %v, %d", dump[4].b.(*memberlistBroadcast).node, dump[4].transmits)
 	}
 }
+
+type namedTestBroadcast struct {
+	name string
+	msg  []byte
+}
+
+func (b *namedTestBroadcast) Name() string                 { return b.name }
+func (b *namedTestBroadcast) Message() []byte              { return b.msg }
+func (b *namedTestBroadcast) Finished()                    {}
+func (b *namedTestBroadcast) Invalidates(o Broadcast) bool { return false }
+
+func namedMsg(name string, fill byte) *namedTestBroadcast {
+	msg := make([]byte, 115)
+	for i := range msg {
+		msg[i] = fill
+	}
+	return &namedTestBroadcast{name: name, msg: msg}
+}
+
+// A named broadcast that replaces an earlier one empties the queue, which
+// resets the id generator; the replacement must not reuse the id of an item
+// queued after it.
+func TestTransmitLimitedQueue_NamedReplaceThenRelaysKeepsAll(t *testing.T) {
+	q := &TransmitLimitedQueue{
+		NumNodes:       func() int { return 3 },
+		RetransmitMult: 4,
+	}
+
+	q.QueueBroadcast(namedMsg("node-3", 'a'))
+	q.QueueBroadcast(namedMsg("node-3", 'b'))
+	q.QueueBroadcast(namedMsg("node-1", 'c'))
+	q.QueueBroadcast(namedMsg("node-2", 'd'))
+
+	require.Equal(t, 3, q.NumQueued())
+
+	var found bool
+	for _, m := range q.GetBroadcasts(2, 1398) {
+		if len(m) > 0 && m[0] == 'b' {
+			found = true
+		}
+	}
+	require.True(t, found, "second node-3 message missing from GetBroadcasts")
+}
